@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import re
+import datetime
 
 import crud, models, schemas
 from database import SessionLocal, engine
@@ -19,11 +20,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# @app.get("/")
-# def read_root():
-#     return {"hello": "World"}
-
 
 # Validation input
 class Validation:
@@ -44,8 +40,6 @@ class Validation:
                 return True
         return False
         
-
-
 # API 1: Create Account
 @app.post("/user")
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)) -> JSONResponse:
@@ -82,7 +76,37 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)) -> JSON
 
 
 # API 2: Verify Account and Password
-# ...
+@app.post("/login")
+def verify_account(user: schemas.UserCreate, db: Session = Depends(get_db)) -> JSONResponse:
+    
+    db_user = crud.get_user_by_name(db, username=user.username)
+    if not db_user:
+        content = {
+            "success": False,
+            "reason": "The user not existed."
+        }
+        return JSONResponse(content=content, status_code=401)
+    
+    print(f"Compare time, {db_user.lock_until}, {datetime.datetime.now()}")
+    if db_user.lock_until > datetime.datetime.now():
+        content = {
+            "success": False,
+            "reason": "The user is being locked"
+        }
+        return JSONResponse(content=content, status_code=403)
+    
+    # compare the user.password == db_user.hashed_password
+    if crud.salt_password(user.password) != db_user.hashed_password:
+        crud.set_fail_counter(db, db_user, 1)
+        
+        content = {
+            "success": False,
+            "reason": "The password is not corrected."
+        }
+        return JSONResponse(content=content, status_code=401)
+    else:
+        crud.set_fail_counter(db, db_user, 0)
+        return JSONResponse(content={"success": True})
 
 @app.get("/users", response_model=list[schemas.User])
 def read_users(db: Session = Depends(get_db)):
