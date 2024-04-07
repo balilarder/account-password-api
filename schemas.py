@@ -1,4 +1,7 @@
 from pydantic import BaseModel
+from datetime import datetime
+
+from typing import Optional
 
 # class UserBase(BaseModel):
 #     pass
@@ -27,10 +30,10 @@ class UserCreate(BaseModel):
 
 class User(BaseModel):
     id: int
-    # is_active: bool
-    # items: list[Item] = []
     username: str
     hashed_password: str
+    fail_counter: int      # default 0
+    lock_until: Optional[datetime] = None
     
 
     class Config:

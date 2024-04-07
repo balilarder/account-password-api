@@ -27,8 +27,8 @@ def read_root():
 @app.post("/user", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_name(db, username=user.username)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already existed")
+    # if db_user:
+    #     raise HTTPException(status_code=400, detail="Username already existed")
     
     # check username ok
     # check password ok
