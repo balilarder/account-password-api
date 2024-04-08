@@ -2,10 +2,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
 import models, schemas
-
-
-def get_user(db: Session, user_id: int):
-    return db.query(models.User).filter(models.User.id == user_id).first()
+from passwd import get_password_hash
 
 
 def get_user_by_name(db: Session, username: str):
@@ -17,9 +14,11 @@ def get_users(db: Session):
 
 
 def create_user(db: Session, user: schemas.UserCreate):
-    fake_hashed_password = salt_password(user.password)
     
-    db_user = models.User(username=user.username, hashed_password=fake_hashed_password)
+    hashed_password = get_password_hash(user.password)
+    
+    db_user = models.User(username=user.username, hashed_password=hashed_password)
+
 
     db.add(db_user)
     db.commit()
@@ -39,7 +38,3 @@ def set_fail_counter(db: Session, user: models.User, set_to: int):
         user.fail_counter = 0
     
     db.commit()
-
-
-def salt_password(password: str):
-    return password + "notreallyhashed"

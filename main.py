@@ -1,11 +1,10 @@
-from typing import Union
-
-from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import re
 import datetime
 
+from passwd import verify_password
 import crud, models, schemas
 from database import SessionLocal, engine
 
@@ -72,7 +71,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)) -> JSON
         return JSONResponse(content=content, status_code=422)
     
     crud.create_user(db=db, user=user)
-    return JSONResponse(content={"success": True})
+    return JSONResponse(content={"success": True}, status_code=201)
 
 
 # API 2: Verify Account and Password
@@ -96,7 +95,8 @@ def verify_account(user: schemas.UserCreate, db: Session = Depends(get_db)) -> J
         return JSONResponse(content=content, status_code=403)
     
     # compare the user.password == db_user.hashed_password
-    if crud.salt_password(user.password) != db_user.hashed_password:
+    if not verify_password(plain_password=user.password, hashed_password=db_user.hashed_password):
+    
         crud.set_fail_counter(db, db_user, 1)
         
         content = {
@@ -108,12 +108,7 @@ def verify_account(user: schemas.UserCreate, db: Session = Depends(get_db)) -> J
         crud.set_fail_counter(db, db_user, 0)
         return JSONResponse(content={"success": True})
 
+# testing: for listing all users
 @app.get("/users", response_model=list[schemas.User])
 def read_users(db: Session = Depends(get_db)):
-    users = crud.get_users(db)
-    
-    for user in users:
-        print(f"user: {user}")
-    
-    print("here")
-    return users
+    return crud.get_users(db)
